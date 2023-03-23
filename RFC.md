@@ -22,6 +22,14 @@ There is no copyright associated with this document, and anyone is free to use i
     1. [Description of terms](#description-of-terms)
     2. [TCP Based Service](#tcp-based-tic-tac-toe-service)
     3. [UDP Based Service](#udp-based-tic-tac-toe-service)
+    4. [Session](#session)
+    5. [Creating a game](#creating-a-game)
+    6. [Finding a game](#finding-a-game)
+    7. [Joining a game](#joining-a-game)
+    8. [Making a move](#making-a-move)
+    9. [Getting game status](#getting-game-status)
+    10. [Timeout](#timeout)
+5. [Message reference](#message-reference)
 5. [References](#references)
 
 ## History
@@ -62,7 +70,7 @@ A Tic-Tac-Toe service is defined as a connection based application on TCP listen
 Another Tic-Tac-Toe service is defined as a datagram based application on UDP listening for UDP datagrams on UDP port 3116[1](#1). When a datagram is received, a Tic Tac Toe session is considered to have started, and remains in an "alive" state until either the client or server [sends a "close" message](#gdby) or the server [has not heard from the client over a period of time](). All datagram communication occurs over port 3116.
 
 ### Session
-A client must connect with a server before any game can be created. This is called "establishing a session" and requires the client to send a [greeting message]() to the server, self-identifying the client with a unique string to be used as part of the protocol later. Once the client has identified, the server [acknowledges](#sess) receipt, including a "session identifier" which uniquely identifies this session.
+A client must connect with a server before any game can be created. This is called "establishing a session" and requires the client to send a [greeting message](#helo) to the server, sending the protocol version the client understands and self-identifying the client with a unique string to be used as part of the protocol later. Once the client has identified, the server [acknowledges](#sess) receipt, including the version of the protocol that will be used (see the section on version negotiation) a "session identifier" which uniquely identifies this session.
 
 The server is permitted to use any sort of scheme for session identifiers, so long as they do not include whitespace. Thus, values of "1234" (integer values), "0cb8d694-3999-4bc6-8351-0e978b62a08d" (GUIDs), or "57.34" (floating point values) would all be acceptable. Some servers may choose the floating-point scheme to allow sessions to indicate relationships to one another; for example, two players may be in sessions "4.1" and "4.2", respectively, with observers on sessions "4.3" and "4.4". However, each of these sessions is considered unique, has no special relationship to one another, and is purely left as a server implementation detail.
 
@@ -78,19 +86,28 @@ A client can ask to join an open game by sending a [join](#join) message to the 
 Assuming the game is now filled with its minimum number of players, the server will respond with a message to all clients indicating whose move (referenced by client identifier) is first. That player will be given the moniker "X".
 
 ### Making a move
-A client can make a move on its 
+A client can make a move on its turn by sending a [move](#move) message indiciating the position on the board it wishes to occupy. The server will respond with a [board](#bord) message indicating the current status of the game board; if the move is accepted, the player's move will be present, if it was illegal in some fashion, the board status will remain the same.
 
 ### Getting game status
-A client can request a complete status of the game by sending a [game status]() message
+A client can request a complete status of the game by sending a [game status](#stat) message
 
 ### Timeout
 In the event that the server has not received a message from either of its player clients in a configurable period of time, the server is free to send a [close]() message to 
 
+### Version negotiation
+In the event that the client and server are each using different versions of this protocol, it is expected that the higher-versioning participant will degrade gracefully to use the lower-protocol version asked for by its opposite. Thus, if a version 2 client contacts a version 1 server, the client should degrade to version 1; similarly, if the version 1 client contacts a version 2 server, the server should degrade to version 1 for that client. This should not affect other clients on that server; the server is free to use the highest-understood version for each client independently of others.
+
 ## Message Reference
-Messages sent in this protocol consist of a 4-letter ASCII command phrase, with additional information following until a CRLF terminator.
+Messages sent in this protocol consist of a 4-letter ASCII command phrase, with additional information following, ending in a CRLF terminator. All messages are assumed to be sent using the 7-bit ASCII character set except where otherwise specified.
+
+### BORD
+This message is sent by the server to a client to indicate the current status of a game. After the command, it includes the game identifier, the client-identifier of the two players (the X player--that is the player who went first--comes first in the list), the client-identifier of the player to move next, and a linear representation of the board, with player tokens (`X`, `O`, or `*` if neither player has played there) separated by pipe (`|`) symbols, from upper-left to lower-right in a left-to-right, top-to-bottom fashion. If a winner of the game has been determined, it will appear after the game board information. Example: `BORD GID1 CID1 CID2 CID1 |*|*|*|X|O|X|*|*|*|` for a game that is currently as-yet still playing; that same game may later look like `BORD GID1 CID1 CID2 CID2 |X|*|O|X|O|X|X|*|O| CID1` to indicate the X player's victory after that player's move. Notice that the "next player to move" is listed as CID2 even though the game is terminated; the "next player to move" value is expected to be ignored by clients in the event that the game is over.
 
 ### CREA
-Sent by a client to the server to create a new game. This client is assumed to be one of the players. The server should respond with a [join](#join) message.
+Sent by a client to the server to create a new game. The body of this message must include the client's client identifier. This client is assumed to be one of the players. The server should respond with a [join](#join) message.
+
+### GAMS
+Sent by the server in response to a LIST request. This is a list of all games that are currently looking for players. (If the client specified additional games, the server will include those in the response.) The response packet will be the command `GAMS`, followed by a whitespace-separated list of game identifiers currently meeting the requested criteria.
 
 ### GDBY
 Sent by either the client or the server to its counterpart to indicate it is finished with the session. If this is a client who is sending the message, it is assumed to implicitly be sending a [quit](#quit) message to the game(s) in which it is a player.
@@ -99,12 +116,15 @@ Sent by either the client or the server to its counterpart to indicate it is fin
 Sent by a client to a server to initiate a session with the server. The command is expected to include the version of the protocol understood by the client, and an identifier by which the client identifies itself--an email address for a human, for example, or a GUID for an autonomous agent. Examples: `HELO 1 ted@tedneward.com` or `HELO 1 0cb8d694-3999-4bc6-8351-0e978b62a08d`. The server is expected to respond with a [session initiation]() command.
 
 ### JOIN
-Sent by the server to the client to indicate the client has successfully joined the game. The message will include the JOIN command, and the game identifier.
+Sent by the client to the server to join a given game identified in the body by the game-identifier.
+
+### JOND
+Sent by the server to the client to indicate the client has successfully joined the game. The message will include the client identifier of the client making the request, and the game identifier. If the game now has its necessary number of players, the server will then also send out a YRMV message to all clients indicating the player whose move it is.
+
+### LIST
+This is sent by the client to the server to ask it for a list of all the currently-open games. "Open" games are those that do not have a full complement of players. If the LIST message is sent with a body of `CURR` following it, then the server responds with a list of all games currently open and in-play. If the LIST message is sent with a body of `ALL`, the server responds with a list of all games it currently holds: open, in-play, and finished. The server responds with....
 
 ### MOVE
-
-### STAT
-This message expects a game-identifier body, indicating the game whose status is requested.
 
 ### TERM
 This message indicates the termination of a game. The message includes the game-identifier, and the client-identifier of the player who is declared the winner. For games which are stalemate, no client-identifier is sent after the game-identifier.
@@ -115,8 +135,39 @@ Sent by the client to indicate that the player wishes to abandon the game withou
 ### SESS
 This is sent by the server to the client to indicate the server has officially created a unique session between it and the client. The command is expected to include the version of the protocol the server will use with the client, and the unique session identifier itself. These values will be separated by whitespace. Examples: `SESS 1 57` or `SESS 1 0cb8d694-3999-4bc6-8351-0e978b62a08d`.
 
+### STAT
+This message is sent by a client to the server; it expects the client to pass a game-identifier body, indicating the game whose status is requested.
+
 ### YRMV
-This message is sent by the server to al of the participant clients in a game to indicate which player's move is currently accepted. This message always includes the command, the game identifier, and the client identifier whose move is currently accepted. Once this message is sent, the server will not accept any [move]() commands from a client other than the one whose identifier was included in this message.
+This message is sent by the server to al of the participant clients in a game to indicate which player's move is currently accepted. This message always includes the command, the game identifier, and the client identifier whose move is currently accepted. Once this message is sent, the server will not accept any [move](#move) commands from a client other than the one whose identifier was included in this message.
+
+## Example of use
+
+Two clients, CID1 and CID2, are going to play a game of TicTacToe using this protocol.
+
+CID1 -> server: `HELO 1 CID1`
+
+server -> CID1: `SESS S1 CID1`
+
+CID1 -> server: `CREA CID1`
+
+server -> CID1: `JOND CID1 G1`
+
+CID2 -> server: `HELO 1 CID2`
+
+server -> CID2: `SESS S2 CID2`
+
+CID2 -> server: `LIST`
+
+server -> CID2: `GAMS G1`
+
+CID2 -> server: `JOIN G1`
+
+server -> CID2: `JOND CID2 G1`
+
+server -> CID1: `YRMV G1 CID1`
+
+server -> CID2: `YRMV G1 CID1`
 
 ## Footnotes
 
