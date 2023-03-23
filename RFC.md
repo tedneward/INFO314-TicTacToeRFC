@@ -107,7 +107,7 @@ A client can make a move on its turn by sending a [move](#move) message indiciat
 A client can request a complete status of the game by sending a [game status](#stat) message, which sends a response that includes 
 
 ### Timeout
-In the event that the server has not received a message from either of its player clients in a configurable period of time, the server is free to send a [close]() message to 
+In the event that the server has not received a message from either of its player clients in a configurable period of time, the server is free to send a [close](#term) message to remaining players and  
 
 ### Version negotiation
 In the event that the client and server are each using different versions of this protocol, it is expected that the higher-versioning participant will degrade gracefully to use the lower-protocol version asked for by its opposite. Thus, if a version 2 client contacts a version 1 server, the client should degrade to version 1; similarly, if the version 1 client contacts a version 2 server, the server should degrade to version 1 for that client. This should not affect other clients on that server; the server is free to use the highest-understood version for each client independently of others.
