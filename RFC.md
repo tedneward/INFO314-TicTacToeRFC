@@ -67,7 +67,7 @@ A Tic-Tac-Toe service is defined as a connection based application on TCP listen
 
 ### UDP Based Tic Tac Toe Service
 
-Another Tic-Tac-Toe service is defined as a datagram based application on UDP listening for UDP datagrams on UDP port 3116[1](#1). When a datagram is received, a Tic Tac Toe session is considered to have started, and remains in an "alive" state until either the client or server [sends a "close" message](#gdby) or the server [has not heard from the client over a period of time](). All datagram communication occurs over port 3116.
+Another Tic-Tac-Toe service is defined as a datagram based application on UDP listening for UDP datagrams on UDP port 3116[1](#1). When a datagram is received, a Tic Tac Toe session is considered to have started, and remains in an "alive" state until either the client or server [sends a "close" message](#gdby) or the server [has not heard from the client over a period of time](#timeout). All datagram communication occurs over port 3116[1](#1).
 
 ### Session
 A client must connect with a server before any game can be created. This is called "establishing a session" and requires the client to send a [greeting message](#helo) to the server, sending the protocol version the client understands and self-identifying the client with a unique string to be used as part of the protocol later. Once the client has identified, the server [acknowledges](#sess) receipt, including the version of the protocol that will be used (see the section on version negotiation) a "session identifier" which uniquely identifies this session.
@@ -75,10 +75,10 @@ A client must connect with a server before any game can be created. This is call
 The server is permitted to use any sort of scheme for session identifiers, so long as they do not include whitespace. Thus, values of "1234" (integer values), "0cb8d694-3999-4bc6-8351-0e978b62a08d" (GUIDs), or "57.34" (floating point values) would all be acceptable. Some servers may choose the floating-point scheme to allow sessions to indicate relationships to one another; for example, two players may be in sessions "4.1" and "4.2", respectively, with observers on sessions "4.3" and "4.4". However, each of these sessions is considered unique, has no special relationship to one another, and is purely left as a server implementation detail.
 
 ### Creating a game
-A client can choose to create a new game (in essence looking for another player) by sending a [create](#crea) message to the server. This will create a new, unique game on the server that is still missing a player, and the server will respond with a [joined-game](#join) message; this is the same response as if the client [joined](#join) an existing game. Since there is no second player yet in this game, the client will receive no further messages from the server until a (different) client joins the game.
+A client can choose to create a new game (in essence looking for another player) by sending a [create](#crea) message to the server. This will create a new, unique game on the server that is still missing a player, and the server will respond with a [joined-game](#jond) message; this is the same response as if the client [joined](#join) an existing game. Since there is no second player yet in this game, the client will receive no further messages from the server until a (different) client joins the game.
 
 ### Finding a game
-A client can also ask to see a list of open games on the server by sending a [game list]() message to the server. The server will respond with a [list of open games](). From there, the client can select a game and ask to join it.
+A client can also ask to see a list of open games on the server by sending a [list](#list) message to the server. The server will respond with a [list of open games](#gams). From there, the client can select a game by identifier and ask to [join](#join) it.
 
 ### Joining a game
 A client can ask to join an open game by sending a [join](#join) message to the server.
@@ -101,7 +101,7 @@ In the event that the client and server are each using different versions of thi
 Messages sent in this protocol consist of a 4-letter ASCII command phrase, with additional information following, ending in a CRLF terminator. All messages are assumed to be sent using the 7-bit ASCII character set except where otherwise specified.
 
 ### BORD
-This message is sent by the server to a client to indicate the current status of a game. After the command, it includes the game identifier, the client-identifier of the two players (the X player--that is the player who went first--comes first in the list), the client-identifier of the player to move next, and a linear representation of the board, with player tokens (`X`, `O`, or `*` if neither player has played there) separated by pipe (`|`) symbols, from upper-left to lower-right in a left-to-right, top-to-bottom fashion. If a winner of the game has been determined, it will appear after the game board information. Example: `BORD GID1 CID1 CID2 CID1 |*|*|*|X|O|X|*|*|*|` for a game that is currently as-yet still playing; that same game may later look like `BORD GID1 CID1 CID2 CID2 |X|*|O|X|O|X|X|*|O| CID1` to indicate the X player's victory after that player's move. Notice that the "next player to move" is listed as CID2 even though the game is terminated; the "next player to move" value is expected to be ignored by clients in the event that the game is over.
+This message is sent by the server to a client to indicate the current status of a game. If there is not enough players to be playing this game, the command will respond solely with the game-identifier and the client-identifier of the other player. If there are two players in the game, the message will include: the game identifier; the client-identifier of the two players (the X player--that is the player who went first--comes first in the list); the client-identifier of the player to move next; and a linear representation of the board, with player tokens (`X`, `O`, or `*` if neither player has played there) separated by pipe (`|`) symbols, from upper-left to lower-right in a left-to-right, top-to-bottom fashion. If a winner of the game has been determined, it will appear after the game board information. Example: `BORD GID1 CID1 CID2 CID1 |*|*|*|X|O|X|*|*|*|` for a game that is currently as-yet still playing; that same game may later look like `BORD GID1 CID1 CID2 CID2 |X|*|O|X|O|X|X|*|O| CID1` to indicate the X player's victory after that player's move. Notice that the "next player to move" is listed as CID2 even though the game is terminated; the "next player to move" value is expected to be ignored by clients in the event that the game is over.
 
 ### CREA
 Sent by a client to the server to create a new game. The body of this message must include the client's client identifier. This client is assumed to be one of the players. The server should respond with a [join](#join) message.
@@ -145,29 +145,41 @@ This message is sent by the server to al of the participant clients in a game to
 
 Two clients, CID1 and CID2, are going to play a game of TicTacToe using this protocol.
 
-CID1 -> server: `HELO 1 CID1`
+> CID1 -> server: `HELO 1 CID1`
 
-server -> CID1: `SESS S1 CID1`
+server -> CID1: `SESS SID1 CID1`
 
 CID1 -> server: `CREA CID1`
 
-server -> CID1: `JOND CID1 G1`
+server -> CID1: `JOND CID1 GID1`
 
 CID2 -> server: `HELO 1 CID2`
 
-server -> CID2: `SESS S2 CID2`
+server -> CID2: `SESS SID2 CID2`
 
 CID2 -> server: `LIST`
 
-server -> CID2: `GAMS G1`
+server -> CID2: `GAMS GID1`
 
-CID2 -> server: `JOIN G1`
+CID2 -> server: `STAT GID1`
 
-server -> CID2: `JOND CID2 G1`
+server -> CID2: `BORD GID1 CID1`
 
-server -> CID1: `YRMV G1 CID1`
+CID2 -> server: `JOIN GID1`
 
-server -> CID2: `YRMV G1 CID1`
+server -> CID2: `JOND CID2 GID1`
+
+server -> CID1: `YRMV GID1 CID1`
+
+server -> CID2: `YRMV GID1 CID1`
+
+CID1 -> server: `MOVE GID1 5`
+
+server -> CID1: `BORD GID1 CID1 CID2 CID2 |*|*|*|*|X|*|*|*|*|`
+
+server -> CID1: `YRMV GID1 CID2`
+
+server -> CID2: `YRMV GID1 CID2`
 
 ## Footnotes
 
