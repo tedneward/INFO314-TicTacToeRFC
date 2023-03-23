@@ -227,6 +227,8 @@ Since it's now CID2's turn, server now sends out messages to each of the players
 
 > server -> CID2: `YRMV GID1 CID2`
 
+(To be continued...)
+
 ## Footnotes
 
 ### 1
