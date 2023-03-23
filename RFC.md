@@ -18,6 +18,9 @@ There is no copyright associated with this document, and anyone is free to use i
 1. [Status of this memo](#status-of-this-memo)
 2. [History](#history)
 3. [Rules of Tic-Tac-Toe](#rules-of-tic-tac-toe)
+    1. [Determination of which player begins](#determination-of-which-player-begins)
+    2. [Restrictions around token placement](#restrictions-around-token-placement)
+    3. [Game termination](#game-termination)
 4. [Detailed Description](#detailed-description)
     1. [Description of terms](#description-of-terms)
     2. [TCP Based Service](#tcp-based-tic-tac-toe-service)
@@ -30,7 +33,21 @@ There is no copyright associated with this document, and anyone is free to use i
     9. [Getting game status](#getting-game-status)
     10. [Timeout](#timeout)
 5. [Message reference](#message-reference)
-5. [References](#references)
+    * [BORD](#bord)
+    * [CREA](#crea)
+    * [GAMS](#gams)
+    * [GDBY](#gdby)
+    * [HELO](#helo)
+    * [JOIN](#join)
+    * [JOND](#jond)
+    * [LIST](#list)
+    * [MOVE](#move)
+    * [QUIT](#quit)
+    * [SESS](#sess)
+    * [STAT](#stat)
+    * [TERM](#term)
+    * [YRMV](#yrmv)
+6. [References](#references)
 
 ## History
 An early variation of the game was played in the Roman Empire, around the 1st century B.C. It was called "terni lapilli," which means "three pebbles at a time." The game's grid markings have been found chalked all over Roman ruins. Evidence of the game was also found in ancient Egyptian ruins.
@@ -62,11 +79,9 @@ Clients interact with the server in uniquely-identifed "sessions". These are ind
 Clients play each other in games that are also uniquely-identified. These "game identifiers" are similar to session identifiers in that they are strings of non-whitespace ASCII characters that cannot exceed 80 characters in length.
 
 ### TCP Based Tic Tac Toe Service
-
 A Tic-Tac-Toe service is defined as a connection based application on TCP listening for TCP connections on TCP port 3116[1](#1). Once a [connection is established](#session) a Tic Tac Toe session is considered to have started and remains in an "alive" state until either the client or the server chooses to [close the session](). In the TCP session, either client or server may initiate the sending of messages in a fully-duplexed fashion.
 
 ### UDP Based Tic Tac Toe Service
-
 Another Tic-Tac-Toe service is defined as a datagram based application on UDP listening for UDP datagrams on UDP port 3116[1](#1). When a datagram is received, a Tic Tac Toe session is considered to have started, and remains in an "alive" state until either the client or server [sends a "close" message](#gdby) or the server [has not heard from the client over a period of time](#timeout). All datagram communication occurs over port 3116[1](#1).
 
 ### Session
@@ -89,7 +104,7 @@ Assuming the game is now filled with its minimum number of players, the server w
 A client can make a move on its turn by sending a [move](#move) message indiciating the position on the board it wishes to occupy. The server will respond with a [board](#bord) message indicating the current status of the game board; if the move is accepted, the player's move will be present, if it was illegal in some fashion, the board status will remain the same.
 
 ### Getting game status
-A client can request a complete status of the game by sending a [game status](#stat) message
+A client can request a complete status of the game by sending a [game status](#stat) message, which sends a response that includes 
 
 ### Timeout
 In the event that the server has not received a message from either of its player clients in a configurable period of time, the server is free to send a [close]() message to 
@@ -113,21 +128,19 @@ Sent by the server in response to a LIST request. This is a list of all games th
 Sent by either the client or the server to its counterpart to indicate it is finished with the session. If this is a client who is sending the message, it is assumed to implicitly be sending a [quit](#quit) message to the game(s) in which it is a player.
 
 ### HELO
-Sent by a client to a server to initiate a session with the server. The command is expected to include the version of the protocol understood by the client, and an identifier by which the client identifies itself--an email address for a human, for example, or a GUID for an autonomous agent. Examples: `HELO 1 ted@tedneward.com` or `HELO 1 0cb8d694-3999-4bc6-8351-0e978b62a08d`. The server is expected to respond with a [session initiation]() command.
+Sent by a client to a server to initiate a session with the server. The command is expected to include the version of the protocol understood by the client, and an identifier by which the client identifies itself--an email address for a human, for example, or a GUID for an autonomous agent. Examples: `HELO 1 ted@tedneward.com` or `HELO 1 0cb8d694-3999-4bc6-8351-0e978b62a08d`. The server is expected to respond with a [session initiation](#sess) command.
 
 ### JOIN
-Sent by the client to the server to join a given game identified in the body by the game-identifier.
+Sent by the client to the server to join a given game identified in the body by the game-identifier. The server will respond with a "JOND" message to indicate successful join.
 
 ### JOND
 Sent by the server to the client to indicate the client has successfully joined the game. The message will include the client identifier of the client making the request, and the game identifier. If the game now has its necessary number of players, the server will then also send out a YRMV message to all clients indicating the player whose move it is.
 
 ### LIST
-This is sent by the client to the server to ask it for a list of all the currently-open games. "Open" games are those that do not have a full complement of players. If the LIST message is sent with a body of `CURR` following it, then the server responds with a list of all games currently open and in-play. If the LIST message is sent with a body of `ALL`, the server responds with a list of all games it currently holds: open, in-play, and finished. The server responds with....
+This is sent by the client to the server to ask it for a list of all the currently-open games. "Open" games are those that do not have a full complement of players. If the LIST message is sent with a body of `CURR` following it, then the server responds with a list of all games currently open and in-play. If the LIST message is sent with a body of `ALL`, the server responds with a list of all games it currently holds: open, in-play, and finished. The server responds with a [game list](#gams) message listing all of the games that meet the client-specified criteria.
 
 ### MOVE
-
-### TERM
-This message indicates the termination of a game. The message includes the game-identifier, and the client-identifier of the player who is declared the winner. For games which are stalemate, no client-identifier is sent after the game-identifier.
+Sent by a client to the server indicating the move the client wishes to make. The message is followed by a representation of the board, either a linear value (counting the squares from the upper-left, going left-to-right then top-to-bottom) or a "X,Y" cartesian representation with the origin in the lower-left (so that the center square is "2,2", the lower-left is "1,1" and the upper-right is "3,3"). Either representation must be accepted by the server. 
 
 ### QUIT
 Sent by the client to indicate that the player wishes to abandon the game without terminating the session. The QUIT message is expected to include the game identifier of the game being quit. The player opposite the quitting player is immediately declared the winner of the game, and the game is considered to be concluded/finished.
@@ -138,48 +151,81 @@ This is sent by the server to the client to indicate the server has officially c
 ### STAT
 This message is sent by a client to the server; it expects the client to pass a game-identifier body, indicating the game whose status is requested.
 
+### TERM
+This message indicates the termination of a game. The message includes the game-identifier, and the client-identifier of the player who is declared the winner. For games which are stalemate, no client-identifier is sent after the game-identifier.
+
 ### YRMV
 This message is sent by the server to al of the participant clients in a game to indicate which player's move is currently accepted. This message always includes the command, the game identifier, and the client identifier whose move is currently accepted. Once this message is sent, the server will not accept any [move](#move) commands from a client other than the one whose identifier was included in this message.
 
 ## Example of use
 
-Two clients, CID1 and CID2, are going to play a game of TicTacToe using this protocol.
+Two clients, CID1 and CID2, are going to play a game of TicTacToe using this protocol. The first client connects to the server.
 
 > CID1 -> server: `HELO 1 CID1`
 
-server -> CID1: `SESS SID1 CID1`
+The server responds with a new session identifier.
 
-CID1 -> server: `CREA CID1`
+> server -> CID1: `SESS SID1 CID1`
 
-server -> CID1: `JOND CID1 GID1`
+CID1 wants to create a game.
 
-CID2 -> server: `HELO 1 CID2`
+> CID1 -> server: `CREA CID1`
 
-server -> CID2: `SESS SID2 CID2`
+The server responds, indicating the new game's identifier and that CID1 is already joined to it.
 
-CID2 -> server: `LIST`
+> server -> CID1: `JOND CID1 GID1`
 
-server -> CID2: `GAMS GID1`
+CID1 will now not receive any additional messages from the server until another client joins its open game. Meanwhile, CID2 connects to the server.
 
-CID2 -> server: `STAT GID1`
+> CID2 -> server: `HELO 1 CID2`
 
-server -> CID2: `BORD GID1 CID1`
+The server responds by creating a new session and connecting CID2 to it.
 
-CID2 -> server: `JOIN GID1`
+> server -> CID2: `SESS SID2 CID2`
 
-server -> CID2: `JOND CID2 GID1`
+CID2 doesn't know the identifier of the open game, so they ask for a list of all open games.
 
-server -> CID1: `YRMV GID1 CID1`
+> CID2 -> server: `LIST`
 
-server -> CID2: `YRMV GID1 CID1`
+The server has only one open game, so it sends back that list.
 
-CID1 -> server: `MOVE GID1 5`
+> server -> CID2: `GAMS GID1`
 
-server -> CID1: `BORD GID1 CID1 CID2 CID2 |*|*|*|*|X|*|*|*|*|`
+Is this the game CID2 wants?
 
-server -> CID1: `YRMV GID1 CID2`
+> CID2 -> server: `STAT GID1`
 
-server -> CID2: `YRMV GID1 CID2`
+Server responds with the game's status, which hasn't yet started, so there's not much to display yet.
+
+> server -> CID2: `BORD GID1 CID1`
+
+Yep, that's the one. Let's join it.
+
+> CID2 -> server: `JOIN GID1`
+
+Server says that's OK, you're joined.
+
+> server -> CID2: `JOND CID2 GID1`
+
+Server now responds with a YRMV message to each of the players indicating that it is CID1's turn.
+
+> server -> CID1: `YRMV GID1 CID1`
+
+> server -> CID2: `YRMV GID1 CID1`
+
+CID1 considers carefully all of the available options, embraces the conventional opening, and chooses center square.
+
+> CID1 -> server: `MOVE GID1 5`
+
+Server checks the move, which is legal, and sends out a board-update message in response.
+
+> server -> CID1: `BORD GID1 CID1 CID2 CID2 |*|*|*|*|X|*|*|*|*|`
+
+Since it's now CID2's turn, server now sends out messages to each of the players.
+
+> server -> CID1: `YRMV GID1 CID2`
+
+> server -> CID2: `YRMV GID1 CID2`
 
 ## Footnotes
 
