@@ -115,6 +115,14 @@ In the event that the client and server are each using different versions of thi
 ## Message Reference
 Messages sent in this protocol consist of a 4-letter ASCII command phrase, with additional information following, ending in a CRLF terminator. All messages are assumed to be sent using the 7-bit ASCII character set except where otherwise specified.
 
+**Field Delimiters:** The parts of TTTP messages are delimited by whitespace characters (space) or (tab). Multiple whitespace characters will be treated as a single field delimiter.
+
+**Newlines:** TTTP uses ␍ followed by ␊ (␍␊, 0x0D0A) to terminate protocol messages, at the end of any protocol message body parameters.
+
+**Character Encoding:** Session, client, and game identifiers should be ASCII characters for maximum interoperability. Due to language constraints and performance, some clients may support UTF-8 subject names, as may the server, but no guarantees of non-ASCII support are provided.
+
+**Case:** All TTTP message command headers are case-insensitive, but it is recommended that all-upper-case be used for consistency.
+
 ### BORD
 This message is sent by the server to a client to indicate the current status of a game. If there is not enough players to be playing this game, the command will respond solely with the game-identifier and the client-identifier of the other player. If there are two players in the game, the message will include: the game identifier; the client-identifier of the two players (the X player--that is the player who went first--comes first in the list); the client-identifier of the player to move next; and a linear representation of the board, with player tokens (`X`, `O`, or `*` if neither player has played there) separated by pipe (`|`) symbols, from upper-left to lower-right in a left-to-right, top-to-bottom fashion. If a winner of the game has been determined, it will appear after the game board information. Example: `BORD GID1 CID1 CID2 CID1 |*|*|*|X|O|X|*|*|*|` for a game that is currently as-yet still playing; that same game may later look like `BORD GID1 CID1 CID2 CID2 |X|*|O|X|O|X|X|*|O| CID1` to indicate the X player's victory after that player's move. Notice that the "next player to move" is listed as CID2 even though the game is terminated; the "next player to move" value is expected to be ignored by clients in the event that the game is over.
 
