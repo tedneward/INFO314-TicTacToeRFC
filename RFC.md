@@ -33,7 +33,6 @@ There is no copyright associated with this document, and anyone is free to use i
     9. [Getting game status](#getting-game-status)
     10. [Timeout](#timeout)
 5. [Message reference](#message-reference)
-<<<<<<< HEAD
     * [BORD](#bord)
     * [CREA](#crea)
     * [GAMS](#gams)
@@ -49,23 +48,6 @@ There is no copyright associated with this document, and anyone is free to use i
     * [TERM](#term)
     * [YRMV](#yrmv)
 5. [References](#references)
-=======
-    * [BORD](#bord)
-    * [CREA](#crea)
-    * [GAMS](#gams)
-    * [GDBY](#gdby)
-    * [HELO](#helo)
-    * [JOIN](#join)
-    * [JOND](#jond)
-    * [LIST](#list)
-    * [MOVE](#move)
-    * [QUIT](#quit)
-    * [SESS](#sess)
-    * [STAT](#stat)
-    * [TERM](#term)
-    * [YRMV](#yrmv)
-6. [References](#references)
->>>>>>> c4e22fc0423e690b35220e7f391a83a8fee7b88c
 
 ## History
 An early variation of the game was played in the Roman Empire, around the 1st century B.C. It was called "terni lapilli," which means "three pebbles at a time." The game's grid markings have been found chalked all over Roman ruins. Evidence of the game was also found in ancient Egyptian ruins.
