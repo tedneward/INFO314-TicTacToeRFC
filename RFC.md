@@ -33,6 +33,23 @@ There is no copyright associated with this document, and anyone is free to use i
     9. [Getting game status](#getting-game-status)
     10. [Timeout](#timeout)
 5. [Message reference](#message-reference)
+<<<<<<< HEAD
+    * [BORD](#bord)
+    * [CREA](#crea)
+    * [GAMS](#gams)
+    * [GDBY](#gdby)
+    * [HELO](#helo)
+    * [JOIN](#join)
+    * [JOND](#jond)
+    * [LIST](#list)
+    * [MOVE](#move)
+    * [QUIT](#quit)
+    * [SESS](#sess)
+    * [STAT](#stat)
+    * [TERM](#term)
+    * [YRMV](#yrmv)
+5. [References](#references)
+=======
     * [BORD](#bord)
     * [CREA](#crea)
     * [GAMS](#gams)
@@ -48,6 +65,7 @@ There is no copyright associated with this document, and anyone is free to use i
     * [TERM](#term)
     * [YRMV](#yrmv)
 6. [References](#references)
+>>>>>>> c4e22fc0423e690b35220e7f391a83a8fee7b88c
 
 ## History
 An early variation of the game was played in the Roman Empire, around the 1st century B.C. It was called "terni lapilli," which means "three pebbles at a time." The game's grid markings have been found chalked all over Roman ruins. Evidence of the game was also found in ancient Egyptian ruins.
@@ -140,7 +158,7 @@ Sent by the server to the client to indicate the client has successfully joined 
 This is sent by the client to the server to ask it for a list of all the currently-open games. "Open" games are those that do not have a full complement of players. If the LIST message is sent with a body of `CURR` following it, then the server responds with a list of all games currently open and in-play. If the LIST message is sent with a body of `ALL`, the server responds with a list of all games it currently holds: open, in-play, and finished. The server responds with a [game list](#gams) message listing all of the games that meet the client-specified criteria.
 
 ### MOVE
-Sent by a client to the server indicating the move the client wishes to make. The message is followed by a representation of the board, either a linear value (counting the squares from the upper-left, going left-to-right then top-to-bottom) or a "X,Y" cartesian representation with the origin in the lower-left (so that the center square is "2,2", the lower-left is "1,1" and the upper-right is "3,3"). Either representation must be accepted by the server. 
+This is sent by the client to the server to attempt to make a move. The message is followed by a representation of the board, either a linear value (counting the squares from the upper-left, going left-to-right then top-to-bottom) or a "X,Y" cartesian representation with the origin in the lower-left (so that the center square is "2,2", the lower-left is "1,1" and the upper-right is "3,3"). Either representation must be accepted by the server. The server is responsible for evaluating the correctness (legality, among other validation) of the move. Regardless of the move's legality, the server responds with a `BORD` message, indicating the current state of the game; if the player's move was successful, the `BORD` will reflect that it is another player's turn, and if it was not, the game state will be unchanged. If the move was successful, after the `BORD` message the server should notify all players by sending a `YRMV` message indicating whose move it is.
 
 ### QUIT
 Sent by the client to indicate that the player wishes to abandon the game without terminating the session. The QUIT message is expected to include the game identifier of the game being quit. The player opposite the quitting player is immediately declared the winner of the game, and the game is considered to be concluded/finished.
@@ -152,10 +170,31 @@ This is sent by the server to the client to indicate the server has officially c
 This message is sent by a client to the server; it expects the client to pass a game-identifier body, indicating the game whose status is requested.
 
 ### TERM
-This message indicates the termination of a game. The message includes the game-identifier, and the client-identifier of the player who is declared the winner. For games which are stalemate, no client-identifier is sent after the game-identifier.
+This message indicates the termination of a game. The message includes the game-identifier, and the client-identifier of the player who is declared the winner. For games which are stalemate, no client-identifier is sent after the game-identifier. The last parameter in the body is a constant string, "KTHXBYE", indicating the end of the TERM message.
 
 ### YRMV
 This message is sent by the server to al of the participant clients in a game to indicate which player's move is currently accepted. This message always includes the command, the game identifier, and the client identifier whose move is currently accepted. Once this message is sent, the server will not accept any [move](#move) commands from a client other than the one whose identifier was included in this message.
+
+### Client-sent messages
+
+* [CREA](#crea)
+* [GDBY](#gdby)
+* [HELO](#helo)
+* [JOIN](#join)
+* [LIST](#list)
+* [MOVE](#move)
+* [QUIT](#quit)
+* [STAT](#stat)
+
+### Server-sent messages
+
+* [BORD](#bord)
+* [GAMS](#gams)
+* [GDBY](#gdby)
+* [JOND](#jond)
+* [SESS](#sess)
+* [TERM](#term)
+* [YRMV](#yrmv)
 
 ## Example of use
 
