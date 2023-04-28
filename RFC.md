@@ -8,7 +8,7 @@ This document is not an Internet Standards Track specification; it is published 
 
 This document is not a product of the Internet Engineering Task Force (IETF) and does not in any way represents the consensus of the IETF community. It has received almost no public review, has not been approved for publication by the Internet Engineering Steering Group (IESG), and probably should not be used for production purposes by anyone.
 
-Information about the current status of this document, any errata, and how to provide feedback on it may be obtained at https://github.com/tedneward/TicTacToeRFC. 
+Information about the current status of this document, any errata, and how to provide feedback on it may be obtained at https://github.com/tedneward/INFO314-TicTacToeRFC. 
 
 ## Copyright Notice
 There is no copyright associated with this document, and anyone is free to use it for whatever purposes they find useful. However, this document also carries with it no assertions or promises, implied or explicit, as to the accuracy or correctness of any statement found herein. In short, this document should not be used for anything important, ever.
