@@ -81,8 +81,12 @@ Clients play each other in games that are also uniquely-identified. These "game 
 ### TCP Based Tic Tac Toe Service
 A Tic-Tac-Toe service is defined as a connection based application on TCP listening for TCP connections on TCP port 3116[1](#1). Once a [connection is established](#session) a Tic Tac Toe session is considered to have started and remains in an "alive" state until either the client or the server chooses to [close the session](). In the TCP session, either client or server may initiate the sending of messages in a fully-duplexed fashion.
 
+A TicTacToe URL using TCP is denoted using the scheme `t3tcp:` followed by the host and optional port. `t3tcp://localhost` would reference the server on the local machine on the default TCP port (3116). If a different port were specified, it would read as `t3tcp://localhost:4567`.
+
 ### UDP Based Tic Tac Toe Service
 Another Tic-Tac-Toe service is defined as a datagram based application on UDP listening for UDP datagrams on UDP port 3116[1](#1). When a datagram is received, a Tic Tac Toe session is considered to have started, and remains in an "alive" state until either the client or server [sends a "close" message](#gdby) or the server [has not heard from the client over a period of time](#timeout). All datagram communication occurs over port 3116[1](#1).
+
+A TicTacToe URL using TCP is denoted using the scheme `t3udp:` followed by the host and optional port. `t3udp://localhost` would reference the server on the local machine on the default UDP port (3116). If a different port were specified, it would read as `t3udp://localhost:4567`.
 
 ### Session
 A client must connect with a server before any game can be created. This is called "establishing a session" and requires the client to send a [greeting message](#helo) to the server, sending the protocol version the client understands and self-identifying the client with a unique string to be used as part of the protocol later. Once the client has identified, the server [acknowledges](#sess) receipt, including the version of the protocol that will be used (see the section on version negotiation) a "session identifier" which uniquely identifies this session.
