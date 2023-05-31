@@ -1,18 +1,31 @@
 # This is a Client for our Tic-Tac-Toe game. It will communicate over TCP or UDP (user choice) with the server.
 from tkinter import *
 import socket
+import threading
+import uuid
+import sys          # Use sys.argv to get command line arguments
+
 
 class Client:
 	def __init__(self):
+		self.id = uuid.uuid4().hex
 		self.running = False
+		self.protocol = None
+		self.game_code = None
 		self.window_title = "Tic-Tac-Toe Client"
 
-		# Start the client
+		self.game_id = None
+
+		# Start the GUI on the main thread
 		self._start()
+
+		# Start the keyboard input handler in a separate thread
+		# keyboard_input_thread = threading.Thread(target=self._handle_keyboard_input)
+		# keyboard_input_thread.start()
 
 	def _start(self):
 		"""
-		Set up the window and start the client
+		Set up the GUI window and start the client
 		"""
 		# Create the main window
 		window = Tk(screenName=self.window_title)
@@ -24,18 +37,55 @@ class Client:
 		# Place the label where there is space
 		window_title_label.pack()
 
-		# Create a start-game button
-		start_game_button = Button(window, text="Start Game")
+		# # Create a start-game button
+		# start_game_button = Button(window, text="Start Game")
+		#
+		# # Create a restart-game button
+		# restart_game_button = Button(window, text="Restart Game")
+		#
+		# # Create an "Enter Game Code" label
+		# enter_game_code_label = Label(window, text="Enter Game Code")
+		#
+		# # Create a text-entry field for the game code
+		# game_code_entry = Entry(window)
 
-		# Create a restart-game button
-		restart_game_button = Button(window, text="Restart Game")
+		# Let's make the default window dimensions half the screen width and half the screen height
+		screen_width = window.winfo_screenwidth() / 2
+		screen_height = window.winfo_screenheight() / 2
 
-		# Create an "Enter Game Code" label
-		enter_game_code_label = Label(window, text="Enter Game Code")
+		# Adjust the window size
+		window.geometry(f"{int(screen_width)}x{int(screen_height)}")
 
-		# Create a text-entry field for the game code
-		game_code_entry = Entry(window)
+		# Make the window resizable
+		window.resizable(True, True)
 
+		# Let's place the window in the dead center of the screen
+		window.geometry(f"{int(screen_width)}x{int(screen_height)}+{int(screen_width / 2)}+{int(screen_height / 2)}")
 
 		# Display the window
 		window.mainloop()
+
+	def _handle_keyboard_input(self):
+		"""
+		This is a while loop that will run in a separate thread to handle keyboard input from the user during the course of the game.
+		Potential commands are:
+		"quit" - Quit the game
+		"restart" - Restart the game
+		:return:
+		:rtype:
+		"""
+		while self.running:
+			# Get keyboard input from the user
+			command = input("\nEnter a command: ")
+			print("\nYou entered: " + command)
+
+			# Handle the command
+			if command == "quit":
+				self.running = False
+			elif command == "restart":
+				self._restart_game()
+			else:
+				print("Invalid command.")
+
+	def _restart_game(self):
+		pass
