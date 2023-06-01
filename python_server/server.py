@@ -6,6 +6,7 @@ import sys
 import uuid     # For generating unique session IDs
 import time
 import datetime
+from python_server import *
 
 
 class Server:
@@ -13,4 +14,6 @@ class Server:
 		self.live_games = []
 		self.start_time = datetime.datetime.now()
 		self.running = False
+		self.version = 0        # Should be 1 or 2
 		self.hostname = socket.gethostname()
+

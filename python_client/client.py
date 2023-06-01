@@ -4,12 +4,14 @@ import socket
 import threading
 import uuid
 import sys          # Use sys.argv to get command line arguments
+import atexit       # For sending the server a "quit" message when the client is closed
 
 
 class Client:
 	def __init__(self):
 		self.id = uuid.uuid4().hex
 		self.running = False
+		self.version = 0     # Should be 1 or 2
 		self.protocol = None
 		self.game_code = None
 		self.window_title = "Tic-Tac-Toe Client"
