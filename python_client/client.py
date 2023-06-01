@@ -78,14 +78,42 @@ class Client:
 		"""
 		while self.running:
 			# Get keyboard input from the user
-			command = input("\nEnter a command: ")
+			user_input = input("\nEnter a command: ")
+
+			# Parse the command
+			command = user_input.split(" ")[0]
+
 			print("\nYou entered: " + command)
 
+			command = command.upper()
+
 			# Handle the command
-			if command == "quit":
-				self.running = False
-			elif command == "restart":
-				self._restart_game()
+			if command == "BORD":
+				pass
+			elif command == "CREA":
+				pass
+			elif command == "GAMS":
+				pass
+			elif command == "GDBY":
+				pass
+			elif command == "HELO":
+				pass
+			elif command == "JOIN":
+				pass
+			elif command == "JOND":
+				pass
+			elif command == "LIST":
+				pass
+			elif command == "MOVE":
+				pass
+			elif command == "QUIT":
+				pass
+			elif command == "SESS":
+				pass
+			elif command == "TERM":
+				pass
+			elif command == "YRMV":
+				pass
 			else:
 				print("Invalid command.")
 
