@@ -190,6 +190,5 @@ class Server:
 		argument = None
 		if len(message_components) == 4:
 			argument = message_components[3]
-		# Handles a message from a client
-		if command == "CREATE":
-		print(message)
+
+		# TODO: Handle messages
