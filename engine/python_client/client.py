@@ -3,7 +3,6 @@ import socket
 import threading
 import uuid
 import sys          # Use sys.argv to get command line arguments
-import atexit       # For sending the server a "quit" message when the client is closed
 
 
 # Define constants
@@ -18,6 +17,8 @@ CONNECTION_TYPE = {
 
 class Client:
 	def __init__(self, connection_type, hostname=None, logging=LOGGING):
+		if connection_type not in CONNECTION_TYPE:
+			raise ValueError(f"Invalid connection type: {connection_type}. Must be one of {CONNECTION_TYPE.keys()} (case sensitive).")
 		self.id = uuid.uuid4().hex
 		self.running = False
 		self.version = 0     # Should be 1 or 2
