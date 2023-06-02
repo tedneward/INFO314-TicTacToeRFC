@@ -1,5 +1,10 @@
-from python_client.client import Client
+# Import the Client class
 import sys
+from client import Client
+from argparse import ArgumentParser
+
+
+parser = ArgumentParser(description="Client program for connecting to the server.")
 
 
 def main():
