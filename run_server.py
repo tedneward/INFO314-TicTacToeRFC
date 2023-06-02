@@ -1,6 +1,4 @@
 from argparse import ArgumentParser
-from game import Game
-from server import Server
 
 TCP_PORT = 3116
 UDP_PORT = 31161

@@ -1,6 +1,6 @@
 # Import the Client class
 import sys
-from client import Client
+from engine.client import Client
 from argparse import ArgumentParser
 
 
