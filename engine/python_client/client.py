@@ -15,6 +15,11 @@ CONNECTION_TYPE = {
 	"UDP": "UDP"
 }
 
+SCHEMES = {
+	'TCP': 't3tcp://',
+	'UDP': 't3udp://',
+}
+
 class Client:
 	def __init__(self, connection_type, hostname=None, logging=LOGGING):
 		if connection_type not in CONNECTION_TYPE:
@@ -59,16 +64,16 @@ class Client:
 			self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 			# Connect the sockets to the server
-			self.receive_socket.connect((self.hostname, TCP_PORT))
-			self.send_socket.connect((self.hostname, TCP_PORT))
+			self.receive_socket.connect((SCHEMES['TCP'] + self.hostname, TCP_PORT))
+			self.send_socket.connect((SCHEMES['TCP'] + self.hostname, TCP_PORT))
 
 		else:
 			self.receive_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 			self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 			# Connect the sockets to the server
-			self.receive_socket.connect((self.hostname, UDP_PORT))
-			self.send_socket.connect((self.hostname, UDP_PORT))
+			self.receive_socket.connect((SCHEMES['UDP'] + self.hostname, UDP_PORT))
+			self.send_socket.connect((SCHEMES['UDP'] + self.hostname, UDP_PORT))
 
 		# Create the threads for receiving and sending data
 		self.receive_thread = threading.Thread(target=self._receive_data, args=(connection_type,))

@@ -1,35 +1,14 @@
 import random
 import uuid
-import socket
 from datetime import datetime as dt
-import threading
 import sys
+from engine import *
+from engine.helpers import prt_dbg
 
-
-# Define Constants
-TCP_PORT = 3116
-UDP_PORT = 31161
-TIMEOUT = 60 # The number of seconds to wait for a response from the server before timing out
-LOGGING = 1 # 0 = No logging, 1 = Log to console, 2 = Log to file, 3 = Log to console and file
-MAX_CLIENTS = 10
-
-
-## Define "Types" for the game
-GAME_PROTOCOL = {
-	"TCP": 0,
-	"UDP": 0
-}
-
-GAME_STATUS = {
-	"NOT_STARTED": 0,
-	"SEEKING_ADDITIONAL_PLAYER": 1,
-	"IN_PROGRESS": 2,
-	"COMPLETE": 3
-}
 
 
 class Game:
-	def __init__(self, connection_type: GAME_PROTOCOL, log_level=LOGGING):
+	def __init__(self, connection_type: GAME_PROTOCOL, initial_player_id: str, log_level=LOGGING):
 		"""
 		Represents a game of Tic-Tac-Toe
 		"""
@@ -40,11 +19,11 @@ class Game:
 		if log_level > 0:
 			print(f"Creating game {self.id} at {self._created_at}\n")
 		self.game_status: GAME_STATUS = None
-		self.players: list[str] = []                # A list of player IDs. The player in index 0 goes first.
+		self.players: list[str] = [initial_player_id]                # A list of player IDs. The player in index 0 goes first.
 		self.protocol = connection_type
 		self.log_level = log_level
 
-		self.current_player = None             # Player ID of the player whose turn it is and we are waiting for
+		self.current_player = None             # Player ID of the player whose turn it is, and we are waiting for
 
 		self.command_queue: list[str] = []
 
@@ -66,8 +45,7 @@ class Game:
 		return str_to_return
 
 	def add_player_to_game(self, player_id: str, player_who_should_go_first: str|None=None):
-		if self.log_level > 0:
-			sys.stdout.write(f"Adding {player_id} to game {self.id}.\n")
+		prt_dbg(f"Adding {player_id} to game {self.id}.", self.log_level)
 		# This assumes that there is one other player currently in the game. Raise a ValueError if there is currently not
 		if len(self.players) != 1:
 			raise ValueError(f"Invalid number of players in game. Expected 1, got {len(self.players)}")
@@ -79,8 +57,7 @@ class Game:
 			else:
 				self.players.insert(0, player_id)
 			self.current_player = self.players[0]
-			if self.log_level > 0:
-				sys.stdout.write(f"Player {player_id} has been specified to go first. Setting order to {self.players}\n")
+			prt_dbg(f"Player {player_id} has been specified to go first. Setting order to {self.players}", self.log_level)
 		else:
 			first_player_goes_first = random.random() < 0.5
 			if first_player_goes_first:
@@ -88,6 +65,5 @@ class Game:
 			else:
 				self.players.append(player_id)
 			self.current_player = self.players[0]
-			if self.log_level > 0:
-				sys.stdout.write(f"Player {player_id} has been randomly selected to go first. Setting order to {self.players}\n")
+			prt_dbg(f"Player {player_id} has been randomly selected to go first. Setting order to {self.players}", self.log_level)
 		self.game_status = GAME_STATUS['IN_PROGRESS']

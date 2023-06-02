@@ -8,24 +8,30 @@ plays through to game termina!on
 manages up to 10 clients simultaneously
 accepts communica!on over TCP or UDP
 provides console output about communica!on (diagnostic logging)
+
+
+MESSAGE PAYLOAD will be:
+CMD | SENDER_ID | GAME_ID | PAYLOAD
+
 """
+
 
 import socket
 import time
 import datetime
 from game import Game
 import sys
+import threading        # We need this to run multiple games on the server at once
+from engine.helpers import prt_dbg
+from engine import *
 
 
-# Define constants
-TCP_PORT = 3116
-UDP_PORT = 31161
-TIMEOUT = 60 # The number of seconds to wait for a response from the server before timing out
-LOGGING = 1 # 0 = No logging, 1 = Log to console, 2 = Log to file, 3 = Log to console and file
-MAX_CLIENTS = 10
+
+
+
 
 class Server:
-	def __init__(self, log_level: int=LOGGING):
+	def __init__(self, log_level: int=LOGGING, hostname: str=socket.gethostname()):
 		"""
 		Represents a server for our Tic-Tac-Toe game
 
@@ -37,9 +43,89 @@ class Server:
 		self.start_time = datetime.datetime.now()
 		self.running = False
 		self.version = 0        # Should be 1 or 2
-		self.hostname = socket.gethostname()
+		self.hostname = hostname
 		self.log_level = log_level
-		self.max_clients = MAX_CLIENTS      # Default is 10, as defined in the RFC
+
+		# Socket configurations
+		self.tcp_socket = None
+		self.udp_socket = None
+
+		self.tcp_clients = set()
+		self.tcp_clients_lock = threading.Lock()
+		self.tcp_connections = {}
+		self.tcp_socket_receive_thread = None
+		self.tcp_send_thread = None
+
+		self.udp_clients = set()
+		self.udp_clients_lock = threading.Lock()
+		self.udp_connections = {}
+		self.udp_socket_receive_thread = None
+		self.udp_send_thread = None
+
+		self.threads = []
+
+	def _init_server(self):
+		# Initialize the server by creating the sockets, binding them, and setting them on the correct ports
+
+		# TCP
+		self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.tcp_socket.bind((SCHEMES['TCP'] + self.hostname, TCP_PORT))
+		self.tcp_socket.listen(MAX_CLIENTS * 2)     # Two players per game and 10 games
+		# Run this on a separate thread
+		# self.tcp_socket_receive_thread = threading.Thread(target=self._handle_tcp_messages)
+
+		# UDP
+
+	def _handle_tcp_messages(self):
+		while True:
+			data = self.tcp_socket.recv(1024)
+			if not data:
+				prt_dbg(f"Client {self.tcp_socket.getpeername()} disconnected.", self.log_level)
+				break
+			prt_dbg(f"Received data from client {self.tcp_socket.getpeername()}: {data.decode()}", self.log_level)
+			# TODO: Handle the logic here
+
+	def _udp_receive(self):
+		prt_dbg(f"UDP socket is listening on port {UDP_PORT}.", self.log_level)
+		while True:
+			data, address = self.udp_socket.recvfrom(1024)
+			prt_dbg(f"Received data from client {address}: {data.decode()}", self.log_level)
+			# TODO: Handle data here
+
+	def _tcp_receive(self, client, address):
+		prt_dbg(f"Accepted connection from {address}.", self.log_level)
+		with self.tcp_clients_lock:
+			self.tcp_connections[address] = client
+			self.tcp_clients.add(client)
+		try:
+			while True:
+				data = client.recv(1024)
+				if not data:
+					prt_dbg(f"Client {address} disconnected.", self.log_level)
+					break
+				prt_dbg(f"Received data from client {address}: {data.decode()}", self.log_level)
+				with self.tcp_clients_lock:
+					# TODO: Handle data here
+					pass
+		except ConnectionResetError:
+			prt_dbg(f"Connection reset by {address}.", self.log_level)
+			with self.tcp_clients_lock:
+				del self.tcp_connections[address]
+				self.tcp_clients.remove(client)
+				client.close()
+		finally:
+			prt_dbg(f"Closing connection with {address}.", self.log_level)
+			with self.tcp_clients_lock:
+				del self.tcp_connections[address]
+				self.tcp_clients.remove(client)
+				client.close()
+
+
+	def _run(self):
+		prt_dbg("Now running the server", self.log_level)
+		while True:
+			pass
 
 	def find_games(self) -> list[Game]:
 		# Returns a list of joinable games: games that have 1 player and are not in progress
@@ -58,3 +144,18 @@ class Server:
 				game.add_player_to_game(player_id)
 				return True
 		return False
+
+	def create_game(self, connection_type: str, initial_player_id: str, log_level=LOGGING) -> bool:
+		# Creates and adds a game to the self.games list, if possible
+		if len(self.live_games) == MAX_CLIENTS - 1:
+			raise RuntimeError("Maximum number of games already running. Please try again later.")
+		try:
+			if self.log_level > 0:
+				sys.stdout.write(f"Player {initial_player_id} is attempting to create a new game.\n")
+			game = Game(connection_type, initial_player_id, log_level)
+			self.live_games.append(game)
+			return True
+		except Exception as e:
+			if self.log_level > 0:
+				sys.stderr.write(f"Error creating game: {e}\n")
+			return False
