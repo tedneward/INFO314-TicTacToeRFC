@@ -64,6 +64,8 @@ class Server:
 
 		self.threads = []
 
+		self._run()
+
 	def _init_server(self):
 		# Initialize the server by creating the sockets, binding them, and setting them on the correct ports
 
@@ -72,19 +74,13 @@ class Server:
 		self.tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.tcp_socket.bind((SCHEMES['TCP'] + self.hostname, TCP_PORT))
 		self.tcp_socket.listen(MAX_CLIENTS * 2)     # Two players per game and 10 games
-		# Run this on a separate thread
-		# self.tcp_socket_receive_thread = threading.Thread(target=self._handle_tcp_messages)
 
 		# UDP
-
-	def _handle_tcp_messages(self):
-		while True:
-			data = self.tcp_socket.recv(1024)
-			if not data:
-				prt_dbg(f"Client {self.tcp_socket.getpeername()} disconnected.", self.log_level)
-				break
-			prt_dbg(f"Received data from client {self.tcp_socket.getpeername()}: {data.decode()}", self.log_level)
-			# TODO: Handle the logic here
+		self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.udp_socket.bind((SCHEMES['UDP'] + self.hostname, UDP_PORT))
+		self.udp_socket_receive_thread = threading.Thread(target=self._udp_receive)
+		self.udp_socket_receive_thread.start()
 
 	def _udp_receive(self):
 		prt_dbg(f"UDP socket is listening on port {UDP_PORT}.", self.log_level)
@@ -123,9 +119,25 @@ class Server:
 
 
 	def _run(self):
-		prt_dbg("Now running the server", self.log_level)
-		while True:
-			pass
+		try:
+			self._init_server()
+			prt_dbg("Now running the server", self.log_level)
+			# If we receive a new connection, we will create a new thread to handle it.
+			# Also start the thread so it is active.
+			while True:
+				client, address = self.tcp_socket.accept()
+				self.threads.append(threading.Thread(target=self._tcp_receive, args=(client, address)).start())
+		except KeyboardInterrupt:
+			# Handle a keyboard interrupt by shutting down the server
+			prt_dbg("Caught a keyboard interrupt. Server shutting down.", self.log_level)
+			self.tcp_socket.close()
+			self.udp_socket.close()
+			sys.exit()
+		except Exception:
+			prt_dbg("Caught an exception. Server shutting down.", self.log_level)
+			self.tcp_socket.close()
+			self.udp_socket.close()
+			sys.exit()
 
 	def find_games(self) -> list[Game]:
 		# Returns a list of joinable games: games that have 1 player and are not in progress
