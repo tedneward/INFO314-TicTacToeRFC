@@ -4,14 +4,14 @@ Write a TTTP Server (5pts)
 create a server that can:
 accept requests from mul!ple clients start a game
 validate player moves
-plays through to game termina!on
+plays through to game termination
 manages up to 10 clients simultaneously
 accepts communica!on over TCP or UDP
 provides console output about communica!on (diagnostic logging)
 
 
 MESSAGE PAYLOAD will be:
-CMD | SENDER_ID | GAME_ID | PAYLOAD
+GAME_ID | SENDER_ID | COMMAND | PAYLOAD
 
 """
 
@@ -19,15 +19,12 @@ CMD | SENDER_ID | GAME_ID | PAYLOAD
 import socket
 import time
 import datetime
-from game import Game
+from engine.game import Game
 import sys
 import threading        # We need this to run multiple games on the server at once
 from engine.helpers import prt_dbg
 from engine import *
-
-
-
-
+import uuid
 
 
 class Server:
@@ -38,6 +35,7 @@ class Server:
 		:param log_level: 0 = No logging, 1 = Log to console, 2 = Log to file, 3 = Log to console and file
 		:type log_level: int
 		"""
+		self.id = uuid.uuid4().hex
 		self.live_games: list[Game] = []
 		self.start = time.time()
 		self.start_time = datetime.datetime.now()
@@ -66,19 +64,22 @@ class Server:
 
 		self._run()
 
+	def __str__(self):
+		return f"Server {self.id} running on {self.hostname} started at {self.start_time}"
+
 	def _init_server(self):
 		# Initialize the server by creating the sockets, binding them, and setting them on the correct ports
 
 		# TCP
 		self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.tcp_socket.bind((SCHEMES['TCP'] + self.hostname, TCP_PORT))
+		self.tcp_socket.bind((self.hostname, TCP_PORT))
 		self.tcp_socket.listen(MAX_CLIENTS * 2)     # Two players per game and 10 games
 
 		# UDP
 		self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.udp_socket.bind((SCHEMES['UDP'] + self.hostname, UDP_PORT))
+		self.udp_socket.bind((self.hostname, UDP_PORT))
 		self.udp_socket_receive_thread = threading.Thread(target=self._udp_receive)
 		self.udp_socket_receive_thread.start()
 
@@ -86,11 +87,12 @@ class Server:
 		prt_dbg(f"UDP socket is listening on port {UDP_PORT}.", self.log_level)
 		while True:
 			data, address = self.udp_socket.recvfrom(1024)
-			prt_dbg(f"Received data from client {address}: {data.decode()}", self.log_level)
+			self._handle_message(data.decode(), "UDP", address)
+			prt_dbg(f"Received data from client {address}: {data.decode()} over UDP.", self.log_level)
 			# TODO: Handle data here
 
 	def _tcp_receive(self, client, address):
-		prt_dbg(f"Accepted connection from {address}.", self.log_level)
+		prt_dbg(f"Accepted connection over TCP from {address}.", self.log_level)
 		with self.tcp_clients_lock:
 			self.tcp_connections[address] = client
 			self.tcp_clients.add(client)
@@ -100,10 +102,9 @@ class Server:
 				if not data:
 					prt_dbg(f"Client {address} disconnected.", self.log_level)
 					break
-				prt_dbg(f"Received data from client {address}: {data.decode()}", self.log_level)
+				prt_dbg(f"Received data from client {address}: {data.decode()} over TCP.", self.log_level)
 				with self.tcp_clients_lock:
-					# TODO: Handle data here
-					pass
+					self._handle_message(data.decode(), "TCP", address)
 		except ConnectionResetError:
 			prt_dbg(f"Connection reset by {address}.", self.log_level)
 			with self.tcp_clients_lock:
@@ -133,8 +134,8 @@ class Server:
 			self.tcp_socket.close()
 			self.udp_socket.close()
 			sys.exit()
-		except Exception:
-			prt_dbg("Caught an exception. Server shutting down.", self.log_level)
+		except Exception as e:
+			prt_dbg(f"Caught an exception: {e}. Server shutting down.", self.log_level)
 			self.tcp_socket.close()
 			self.udp_socket.close()
 			sys.exit()
@@ -149,8 +150,7 @@ class Server:
 
 	def join_game(self, game_id: str, player_id: str) -> bool:
 		# Returns True if the player was successfully joined to the game, False otherwise
-		if self.log_level > 0:
-			sys.stdout.write(f"Attempting to add player {player_id} to game {game_id}.\n")
+		prt_dbg(f"Attempting to add player {player_id} to game {game_id}.", self.log_level)
 		for game in self.live_games:
 			if game.id == game_id:
 				game.add_player_to_game(player_id)
@@ -162,12 +162,34 @@ class Server:
 		if len(self.live_games) == MAX_CLIENTS - 1:
 			raise RuntimeError("Maximum number of games already running. Please try again later.")
 		try:
-			if self.log_level > 0:
-				sys.stdout.write(f"Player {initial_player_id} is attempting to create a new game.\n")
+			prt_dbg(f"Creating a new game with player {initial_player_id}.", self.log_level)
 			game = Game(connection_type, initial_player_id, log_level)
 			self.live_games.append(game)
 			return True
 		except Exception as e:
-			if self.log_level > 0:
-				sys.stderr.write(f"Error creating game: {e}\n")
+			prt_dbg(f"Error creating game: {e}", self.log_level)
 			return False
+
+	def _handle_message(self, message: str, socket_type, address = None):
+		message_components = message.split("|")
+		game_id = message_components[0]
+		# Check if a game exists with this ID
+		game_exists = False
+		for game in self.live_games:
+			if game.id == game_id:
+				game_exists = True
+				break
+		if not game_exists:
+			if socket_type == "TCP":
+				client = self.tcp_connections[address]
+				client.sendall("ERROR|Game does not exist.".encode())
+			else:
+				self.udp_socket.sendto("ERROR|Game does not exist.".encode(), address)
+		sender_id = message_components[1]
+		command = message_components[2]
+		argument = None
+		if len(message_components) == 4:
+			argument = message_components[3]
+		# Handles a message from a client
+		if command == "CREATE":
+		print(message)

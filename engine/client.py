@@ -3,26 +3,11 @@ import socket
 import threading
 import uuid
 import sys          # Use sys.argv to get command line arguments
-
-
-# Define constants
-LOGGING = 1 # 0 = No logging, 1 = Log to console, 2 = Log to file, 3 = Log to console and file
-TCP_PORT = 3116
-UDP_PORT = 31161
-
-CONNECTION_TYPE = {
-	"TCP": "TCP",
-	"UDP": "UDP"
-}
-
-SCHEMES = {
-	'TCP': 't3tcp://',
-	'UDP': 't3udp://',
-}
+from engine import *
 
 class Client:
-	def __init__(self, connection_type, hostname=None, logging=LOGGING):
-		if connection_type not in CONNECTION_TYPE:
+	def __init__(self, connection_type: str, hostname=None, logging=LOGGING):
+		if connection_type.upper() not in CONNECTION_TYPE:
 			raise ValueError(f"Invalid connection type: {connection_type}. Must be one of {CONNECTION_TYPE.keys()} (case sensitive).")
 		self.id = uuid.uuid4().hex
 		self.running = False
@@ -30,7 +15,7 @@ class Client:
 		self.protocol = None
 		self.game_code = None
 		self.game_id = None
-		self.connection_type = None
+		self.connection_type = connection_type.upper()
 		self.logging = logging
 		if not hostname:
 			self.hostname = socket.gethostname()
@@ -41,18 +26,10 @@ class Client:
 
 		# Sockets and threading
 		self.receive_thread = None
-		self.send_thread = None
 		self.receive_socket = None
 		self.send_socket = None
-		self.udp_socket = None
 
-		self.udp_receive_socket = None
-		self.udp_send_socket = None
-
-		self.tcp_receive_socket = None
-		self.tcp_send_socket = None
-
-		self._connect(connection_type)
+		self._connect(connection_type.upper())
 
 		self._handle_keyboard_input()
 
@@ -64,20 +41,19 @@ class Client:
 			self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 			# Connect the sockets to the server
-			self.receive_socket.connect((SCHEMES['TCP'] + self.hostname, TCP_PORT))
-			self.send_socket.connect((SCHEMES['TCP'] + self.hostname, TCP_PORT))
+			self.receive_socket.connect((self.hostname, TCP_PORT))
+			self.send_socket.connect((self.hostname, TCP_PORT))
 
 		else:
 			self.receive_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 			self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 			# Connect the sockets to the server
-			self.receive_socket.connect((SCHEMES['UDP'] + self.hostname, UDP_PORT))
-			self.send_socket.connect((SCHEMES['UDP'] + self.hostname, UDP_PORT))
+			self.receive_socket.connect((self.hostname, UDP_PORT))
 
 		# Create the threads for receiving and sending data
 		self.receive_thread = threading.Thread(target=self._receive_data, args=(connection_type,))
-		self.send_thread = threading.Thread(target=self._send_data, args=(connection_type,))
+		# self.send_thread = threading.Thread(target=self._send_data, args=(connection_type,))
 
 	def _receive_data(self, connection_type):
 		# This is a socket handler that will run in a separate thread to handle incoming data from the server.
@@ -112,6 +88,15 @@ class Client:
 				data = input('Enter a message: ')
 				print('Sending UDP Message: ' + data)
 				self.send_socket.sendto(data.encode(), (self.hostname, UDP_PORT))
+
+	def send_message(self, message: str):
+		if self.connection_type == CONNECTION_TYPE['TCP']:
+			self.send_socket.sendall(message.encode())
+		else:
+			self.send_socket.sendto(message.encode(), (self.hostname, UDP_PORT))
+
+	def _handle_server_response(self, message: str):
+		pass
 
 	def _handle_keyboard_input(self):
 		"""
