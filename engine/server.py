@@ -185,10 +185,17 @@ class Server:
 				client.sendall("ERROR|Game does not exist.".encode())
 			else:
 				self.udp_socket.sendto("ERROR|Game does not exist.".encode(), address)
-		sender_id = message_components[1]
-		command = message_components[2]
+		
+		order = message_components[0]
 		argument = None
+
+		if len(message_components) == 2:
+			sender_id = message_components[1]
+		if len(message_components) == 3:
+			command = message_components[2]
 		if len(message_components) == 4:
 			argument = message_components[3]
-
-		# TODO: Handle messages
+		
+		if order == 'CREA':
+			playerID = address[1] - 1
+			game = Game(playerID)

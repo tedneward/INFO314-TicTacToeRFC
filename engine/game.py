@@ -4,6 +4,7 @@ from datetime import datetime as dt
 import sys
 from engine import *
 from engine.helpers import prt_dbg
+from typing import Optional
 
 
 
@@ -44,7 +45,7 @@ class Game:
 		str_to_return = str_to_return + player_count + start_time
 		return str_to_return
 
-	def add_player_to_game(self, player_id: str, player_who_should_go_first: str|None=None):
+	def add_player_to_game(self, player_id: str, player_who_should_go_first: Optional[str] = None):
 		prt_dbg(f"Adding {player_id} to game {self.id}.", self.log_level)
 		# This assumes that there is one other player currently in the game. Raise a ValueError if there is currently not
 		if len(self.players) != 1:
