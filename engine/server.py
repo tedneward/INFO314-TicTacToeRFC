@@ -144,7 +144,7 @@ class Server:
 		# Returns a list of joinable games: games that have 1 player and are not in progress
 		joinable_games = []
 		for game in self.live_games:
-			if len(game.players) == 1 and game.game_status == 0:
+			if len(game.players) == 1 and game.game_status == None:
 				joinable_games.append(game)
 		return joinable_games
 
@@ -155,6 +155,7 @@ class Server:
 			if game.id == game_id:
 				game.add_player_to_game(player_id)
 				return True
+		prt_dbg(f"failed to add {player_id} to game {game_id} because {game_id} doesn't exist.", self.log_level)
 		return False
 
 	def create_game(self, connection_type: str, initial_player_id: str, log_level=LOGGING) -> bool:
@@ -182,11 +183,12 @@ class Server:
 		if not game_exists:
 			if socket_type == "TCP":
 				client = self.tcp_connections[address]
+				print(client)
 				client.sendall("ERROR|Game does not exist.".encode())
 			else:
 				self.udp_socket.sendto("ERROR|Game does not exist.".encode(), address)
 		
-		order = message_components[0]
+		order = message_components[0].upper()
 		argument = None
 
 		if len(message_components) == 2:
@@ -197,5 +199,46 @@ class Server:
 			argument = message_components[3]
 		
 		if order == 'CREA':
-			playerID = address[1] - 1
-			game = Game(playerID)
+			self.create_game(socket_type, address[1])
+		# List, Need to change all the prints to send to clients
+		elif order == 'LIST':
+			for i in range(len(self.live_games)):
+				if len(message_components) == 1 and self.live_games[i].game_status == None:
+					print(self.live_games[i], 'none')
+				elif len(message_components) == 2 and message_components[1] == 'CURR':
+					if self.live_games[i].game_status == None or self.live_games[i] == 'IN_PROGRESS':
+						print(self.live_games[i], 'curr')
+				elif len(message_components) == 2 and message_components[1] == 'ALL':
+					print(self.live_games[i], 'all')
+
+		elif order == 'JOIN':
+			print(address[1], sender_id)
+			if self.join_game(sender_id, address[1]):
+				# Successfully joined game
+				print(game.board)
+			else:
+				nip = address[0]
+				nad = address[1]
+				nad = nad - 1
+				naddy = (nip, nad)
+				client = self.tcp_connections[naddy]
+				client.sendall("error!".encode())
+		elif order == 'MOVE':
+			if len(message_components) == 1:
+				return #error
+			
+			if(game.players[0] == address[1]):
+				tt = 'X'
+			else:
+				tt = 'O'
+			i,j = message_components[1].split(",")
+			i = int(i)
+			j = int(j)
+			
+			game.board[2-j][2-i] = tt
+			print(game.board) # this needs to be sent back
+		elif order == 'QUIT':
+
+			game.game_status = 'Done'
+
+			

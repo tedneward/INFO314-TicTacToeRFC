@@ -58,13 +58,14 @@ class Client:
 	def _receive_data(self, connection_type):
 		# This is a socket handler that will run in a separate thread to handle incoming data from the server.
 		# Depending on the connection type, it will handle the data differently.
+		print('here')
 		if connection_type == CONNECTION_TYPE['TCP']:
 			while True:
 				data = self.receive_socket.recv(1024)
 				if self.logging == 1:
 					sys.stdout.write('Receiving TCP Message: ')
 				sys.stdout.write(str(data.decode()))
-				# print(data.decode())
+				print(data.decode())
 		else:
 			# This is a UDP connection
 			while True:
@@ -146,8 +147,6 @@ class Client:
 				pass
 			elif command == "YRMV":
 				pass
-			elif command == "TEST":
-				print("TEST")
 			else:
 				print("Invalid command.")
 
