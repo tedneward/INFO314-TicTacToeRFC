@@ -172,22 +172,9 @@ class Server:
 			return False
 
 	def _handle_message(self, message: str, socket_type, address = None):
-		message_components = message.split("|")
-		game_id = message_components[0]
-		# Check if a game exists with this ID
-		game_exists = False
-		for game in self.live_games:
-			if game.id == game_id:
-				game_exists = True
-				break
-		if not game_exists:
-			if socket_type == "TCP":
-				client = self.tcp_connections[address]
-				print(client)
-				client.sendall("ERROR|Game does not exist.".encode())
-			else:
-				self.udp_socket.sendto("ERROR|Game does not exist.".encode(), address)
-		
+		message_components = message.split(" ")
+		if self.live_games:
+			game = self.live_games[0]
 		order = message_components[0].upper()
 		argument = None
 
@@ -200,6 +187,7 @@ class Server:
 		
 		if order == 'CREA':
 			self.create_game(socket_type, address[1])
+			self.tcp_clients.pop().sendall('hello'.encode())
 		# List, Need to change all the prints to send to clients
 		elif order == 'LIST':
 			for i in range(len(self.live_games)):
@@ -226,19 +214,48 @@ class Server:
 		elif order == 'MOVE':
 			if len(message_components) == 1:
 				return #error
-			
-			if(game.players[0] == address[1]):
+			if game.players[0] == address[1]:
 				tt = 'X'
 			else:
 				tt = 'O'
 			i,j = message_components[1].split(",")
-			i = int(i)
-			j = int(j)
+			x = int(i) - 1
+			y = 3 - int(j)
+			if game.board[y][x] != ' ':
+				print('Unable to put there')
+			if game.board[y][x] == ' ':
+				game.board[y][x] = tt
 			
-			game.board[2-j][2-i] = tt
-			print(game.board) # this needs to be sent back
-		elif order == 'QUIT':
+			for k in range(len(game.board[0])):
+				print(game.board[k]) # this needs to be sent back
 
+			endGame = False
+			for q in range(len(game.board[0])):
+				if game.board[q][0] == game.board[q][1] == game.board[q][2] and (game.board[q][0] != " "):
+					endGame = True
+				if game.board[0][q] == game.board[1][q] == game.board[2][q] and (game.board[0][q] != " "):
+					endGame = True
+				if endGame:
+					break
+			if game.board[0][0] == game.board[1][1] == game.board[2][2] and (game.board[0][0] != " "):
+				endGame =True
+			if game.board[2][0] == game.board[1][1] == game.board[0][2] and (game.board[2][0] != " "):
+				endGame = True
+			
+			if endGame:
+				print("Game Ended!")
+				self.live_games.remove(game)
+				game = None
+			
+
+		elif order == 'QUIT':
 			game.game_status = 'Done'
+		elif order == 'HELO':
+			res = 'HELO 1 ' + str(len(self.tcp_clients))
+			client = self.tcp_clients.pop()
+			client = self.tcp_clients.pop()
+			self.tcp_clients.add(client)
+			client.sendall('HELO 1 3'.encode())
+
 
 			

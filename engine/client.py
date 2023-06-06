@@ -28,9 +28,7 @@ class Client:
 		self.receive_thread = None
 		self.receive_socket = None
 		self.send_socket = None
-
 		self._connect(connection_type.upper())
-
 		self._handle_keyboard_input()
 
 	def _connect(self, connection_type):
@@ -52,6 +50,7 @@ class Client:
 			self.receive_socket.connect((self.hostname, UDP_PORT))
 
 		# Create the threads for receiving and sending data
+		self.send_socket.sendall("HELO 1 Jason".encode())
 		self.receive_thread = threading.Thread(target=self._receive_data, args=(connection_type,))
 		# self.send_thread = threading.Thread(target=self._send_data, args=(connection_type,))
 
@@ -62,10 +61,11 @@ class Client:
 		if connection_type == CONNECTION_TYPE['TCP']:
 			while True:
 				data = self.receive_socket.recv(1024)
+				print(data)
 				if self.logging == 1:
 					sys.stdout.write('Receiving TCP Message: ')
 				sys.stdout.write(str(data.decode()))
-				print(data.decode())
+				# print(data.decode())
 		else:
 			# This is a UDP connection
 			while True:

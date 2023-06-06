@@ -7,8 +7,9 @@ from engine import *
 
 
 parser = ArgumentParser(description="Client program for connecting to the server.")
+text = input("TCP or UDP\n")
 
-parser.add_argument('-CT', '--connection-type', type=str, help='The type of connection to use. Either TCP or UDP.', default="TCP")
+parser.add_argument('-CT', '--connection-type', type=str, help='The type of connection to use. Either TCP or UDP.', default=text)
 parser.add_argument('-H', '--hostname', type=str, help='The hostname of the server to connect to.', default="localhost")
 parser.add_argument('-L', '--log-level', type=int, help='0 = No logging, 1 = Log to console', default=1)
 
