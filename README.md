@@ -1,6 +1,14 @@
 # TicTacToeRFC
 An [RFC](RFC.md) for a protocol for playing a game of TicTacToe over the network
 
+Thank you for your flexibility in this final project. Included is our implementation of the TicTacToeRFC. Due to unforseen issues our implementation is not complete but has several significant features which we believe merit consideration. 
+
+## Reflection 
+
+Within class we presented that the RFC could be improved in several ways but namely through the standardization of the MOVE command. Currently there are two different ways to move, coordinates (X, Y) or a number one through nine. The RFC says that 1, 1 starts in the bottom left hand corner while the one through nine plane starts in the top left. Standardizing this would make the move implementation simpler and more efficiently. For interoperability we are able to successfully connect to another group's server (we connected to Albert's during the final period), but are not able to proceed much psat that point. As a group we appreciated the lack of XML parsing for this RFC and enjoyed working with other groups. Thank you again,
+
+Jason and Wyatt
+
 ## Goals
 
 Your job is to implement "RFC INFO314", also known as TTTP, or the "Tic Tac Toe Protocol". This protocol is defined [here](RFC.md), and will serve as the sole description of the protocol--neither your instructor nor the TA will answer any questions about the protocol. *It is up to you to implement the protocol as defined in the specification, and where any incompatibilities arise, work those out with other groups on your own.*
